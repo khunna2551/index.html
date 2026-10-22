@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAFETY SOS // ศูนย์ควบคุมกู้ภัย วิทยาลัยเทคนิคสุราษฎร์ธานี</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #0b0c10;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(15, 18, 26, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            position: relative;
+        }
+
+        .auth-bar {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-display {
+            font-size: 14px;
+            color: #00ff66;
+            font-weight: 600;
+        }
+        .btn-auth {
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .btn-auth:hover {
+            background: #2980b9;
+        }
+        .btn-logout {
+            background: #e74c3c;
+        }
+        .btn-logout:hover {
+            background: #c0392b;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            margin-top: 10px;
+        }
+        .brand-logo {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(45deg, #e74c3c, #ff7675, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 4px 12px rgba(231, 76, 60, 0.4);
+        }
+        .brand-sub {
+            font-size: 13px;
+            color: #8a94a6;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 850px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .auth-bar {
+                position: relative;
+                top: 0;
+                right: 0;
+                justify-content: center;
+                margin-bottom: 15px;
+            }
+        }
+
+        .control-panel {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .status-box {
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid #2ecc71;
+            color: #2ecc71;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .status-box.emergency {
+            background: rgba(231, 76, 60, 0.2);
+            border-color: #e74c3c;
+            color: #ff6b6b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .info-card span {
+            color: #8a94a6;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #00ff66;
+        }
+
+        .btn-sim {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+            display: none;
+        }
+        .btn-sim:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(231, 76, 60, 0.6);
+        }
+
+        .btn-reset {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ccc;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            display: none;
+        }
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .btn-resolve {
+            padding: 5px 10px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .btn-resolve:hover {
+            background: #219653;
+        }
+
+        #map {
+            width: 100%;
+            height: 450px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+
+        .history-section {
+            margin-top: 25px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .history-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ff7675;
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+        .history-table th {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            color: #8a94a6;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .history-table td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .modal-box {
+            background: #151922;
+            padding: 30px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 360px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #fff;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #8a94a6;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+        .modal-btn {
+            width: 100%;
+            padding: 12px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .modal-switch {
+            text-align: center;
+            font-size: 12px;
+            color: #8a94a6;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+        .modal-switch span {
+            color: #3498db;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <div class="auth-bar">
+        <span id="userDisplay" class="user-display">👤 สถานะ: โหมดผู้ใช้ทั่วไป</span>
+        <button id="authBtn" class="btn-auth" onclick="openAuthModal()">🔑 เข้าสู่ระบบ / สมัคร</button>
+    </div>
+
+    <div class="header">
+        <div class="brand-logo">SAFETY SOS HUB</div>
+        <div class="brand-sub">ศูนย์ควบคุมกู้ภัย วิทยาลัยเทคนิคสุราษฎร์ธานี</div>
+    </div>
+
+    <div class="main-grid">
+        <div class="control-panel">
+            <div id="statusBox" class="status-box">
+                🟢 สถานะระบบ: ปกติไม่มีเหตุ
+            </div>
+
+            <div class="info-card">
+                <span>ศูนย์กู้ภัยหลัก:</span>
+                <div class="info-value" style="color: #3498db;">วิทยาลัยเทคนิคสุราษฎร์ธานี</div>
+            </div>
+
+            <div class="info-card">
+                <span>จำนวนเหตุฉุกเฉินสะสม:</span>
+                <div id="totalAlerts" class="info-value">0 รายการ</div>
+            </div>
+
+            <div class="info-card">
+                <span>แจ้งเหตุล่าสุดเมื่อ:</span>
+                <div id="timeVal" class="info-value" style="color: #fff;">-</div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); width: 100%;">
+
+            <button id="simBtn" class="btn-sim" onclick="simulateSOS()">🚨 [แอดมิน] จำลองกดส่ง SOS</button>
+            <button id="resetBtn" class="btn-reset" onclick="resetSOS()">🔄 เคลียร์แผนทั้งหมด</button>
+        </div>
+
+        <div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <div class="history-section">
+        <div class="history-title">📜 บันทึกประวัติการแจ้งเหตุ SOS</div>
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>เวลาที่ได้รับแจ้ง</th>
+                    <th>ละติจูด (Lat)</th>
+                    <th>ลองจิจูด (Lng)</th>
+                    <th>สถานะการนำทาง / จัดการ</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr>
+                    <td colspan="5" style="text-align: center; color: #666; padding: 20px;">ยังไม่มีประวัติการแจ้งเหตุฉุกเฉิน</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="authModal" class="modal-overlay">
+    <div class="modal-box">
+        <div id="modalTitle" class="modal-title">🔑 เข้าสู่ระบบ</div>
+        
+        <div class="form-group">
+            <label>ชื่อผู้ใช้งาน (รองรับภาษาไทย/อังกฤษ):</label>
+            <input type="text" id="usernameInput" placeholder="กรอกชื่อของคุณ (เช่น แอดมิน, แอดมินหนึ่ง, แอดมินสอง)">
+        </div>
+        
+        <div class="form-group">
+            <label>รหัสผ่าน (อย่างน้อย 6 ตัวอักษรขึ้นไป):</label>
+            <input type="password" id="passwordInput" placeholder="กรอกรหัสผ่าน 6 ตัวขึ้นไป">
+        </div>
+
+        <button id="modalSubmitBtn" class="modal-btn" onclick="handleAuthSubmit()">เข้าสู่ระบบ</button>
+        
+        <div class="modal-switch" onclick="toggleAuthMode()">
+            <span id="switchText">ยังไม่มีบัญชี? สมัครสมาชิกที่นี่</span>
+        </div>
+        <div style="text-align: center; margin-top: 10px;">
+            <button style="background:none; border:none; color:#666; cursor:pointer; font-size:12px;" onclick="closeAuthModal()">[ ปิดหน้าต่าง ]</button>
+        </div>
+    </div>
+</div>
+
+<audio id="sirenSound" src="https://www.soundjay.com/buttons/sounds/bevel-1.mp3" preload="auto"></audio>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+<script>
+    const baseLat = 9.133202;
+    const baseLng = 99.329871;
+
+    const map = L.map('map').setView([baseLat, baseLng], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const baseIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    L.marker([baseLat, baseLng], {icon: baseIcon}).addTo(map)
+        .bindPopup("<b>🏥 ศูนย์กู้ภัย วิทยาลัยเทคนิคสุราษฎร์ธานี</b>").openPopup();
+
+    let sosList = [];
+    let isRegisterMode = false;
+    let currentUser = null;
+
+    function openAuthModal() {
+        document.getElementById('authModal').style.display = 'flex';
+    }
+
+    function closeAuthModal() {
+        document.getElementById('authModal').style.display = 'none';
+    }
+
+    function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        if (isRegisterMode) {
+            document.getElementById('modalTitle').innerText = "📝 สมัครสมาชิกใหม่";
+            document.getElementById('modalSubmitBtn').innerText = "สมัครสมาชิก";
+            document.getElementById('switchText').innerText = "มีบัญชีอยู่แล้ว? เข้าสู่ระบบที่นี่";
+        } else {
+            document.getElementById('modalTitle').innerText = "🔑 เข้าสู่ระบบ";
+            document.getElementById('modalSubmitBtn').innerText = "เข้าสู่ระบบ";
+            document.getElementById('switchText').innerText = "ยังไม่มีบัญชี? สมัครสมาชิกที่นี่";
+        }
+    }
+
+    function handleAuthSubmit() {
+        const user = document.getElementById('usernameInput').value.trim();
+        const pass = document.getElementById('passwordInput').value.trim();
+
+        if (!user || !pass) {
+            alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วนครับ!');
+            return;
+        }
+
+        if (isRegisterMode && pass.length < 6) {
+            alert('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษรขึ้นไปครับ!');
+            return;
+        }
+
+        let usersDB = JSON.parse(localStorage.getItem('sos_users_db')) || {};
+
+        if (isRegisterMode) {
+            if (usersDB[user]) {
+                alert('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาใช้ชื่ออื่น!');
+                return;
+            }
+            usersDB[user] = pass;
+            localStorage.setItem('sos_users_db', JSON.stringify(usersDB));
+            alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบอีกครั้ง');
+            toggleAuthMode();
+        } else {
+            const isAdminName = (user === "แอดมิน" || user === "แอดมินหนึ่ง" || user === "แอดมินสอง" || user === "admin");
+            const validPass = (usersDB[user] && usersDB[user] === pass) || (isAdminName && pass === "123456");
+
+            if (validPass) {
+                currentUser = user;
+                updateUserUI();
+                closeAuthModal();
+                alert('ยินดีต้อนรับเข้าสู่ระบบ คุณ ' + user);
+                renderHistoryTable();
+            } else {
+                alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง!');
+            }
+        }
+    }
+
+    function isAdmin() {
+        if (!currentUser) return false;
+        return currentUser === "แอดมิน" || currentUser === "แอดมินหนึ่ง" || currentUser === "แอดมินสอง" || currentUser.indexOf("admin") !== -1;
+    }
+
+    function updateUserUI() {
+        const userDisplay = document.getElementById('userDisplay');
+        const authBtn = document.getElementById('authBtn');
+        const simBtn = document.getElementById('simBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        if (currentUser) {
+            userDisplay.innerText = "👤 โปรไฟล์: " + currentUser;
+            authBtn.innerText = "ออกจากระบบ";
+            authBtn.className = "btn-auth btn-logout";
+            authBtn.onclick = logout;
+
+            if (isAdmin()) {
+                simBtn.style.display = "block";
+                resetBtn.style.display = "block";
+            } else {
+                simBtn.style.display = "none";
+                resetBtn.style.display = "none";
+            }
+        } else {
+            userDisplay.innerText = "👤 สถานะ: โหมดผู้ใช้ทั่วไป";
+            authBtn.innerText = "🔑 เข้าสู่ระบบ / สมัคร";
+            authBtn.className = "btn-auth";
+            authBtn.onclick = openAuthModal;
+            simBtn.style.display = "none";
+            resetBtn.style.display = "none";
+        }
+    }
+
+    function logout() {
+        currentUser = null;
+        updateUserUI();
+        renderHistoryTable();
+        alert('ออกจากระบบเรียบร้อยแล้ว');
+    }
+
+    function simulateSOS() {
+        const randomLat = baseLat + (Math.random() - 0.5) * 0.03;
+        const randomLng = baseLng + (Math.random() - 0.5) * 0.03;
+        addSOSAlert(randomLat, randomLng);
+    }
+
+    function addSOSAlert(lat, lng) {
+        const timeStr = new Date().toLocaleTimeString('th-TH');
+        
+        const alertData = {
+            id: sosList.length + 1,
+            lat: lat,
+            lng: lng,
+            time: timeStr,
+            resolved: false,
+            marker: null,
+            route: null
+        };
+
+        const redIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        alertData.marker = L.marker([lat, lng], {icon: redIcon}).addTo(map)
+            .bindPopup("<b>⚠️ SOS คนที่ #" + alertData.id + "</b><br>เวลา: " + timeStr);
+
+        alertData.route = L.Routing.control({
+            waypoints: [
+                L.latLng(baseLat, baseLng),
+                L.latLng(lat, lng)
+            ],
+            lineOptions: {
+                styles: [{color: '#e74c3c', weight: 4, opacity: 0.8}]
+            },
+            createMarker: function() { return null; },
+            show: false
+        }).addTo(map);
+
+        sosList.push(alertData);
+
+        const activeCount = sosList.filter(s => !s.resolved).length;
+        const statusBox = document.getElementById('statusBox');
+        statusBox.className = "status-box emergency";
+        statusBox.innerHTML = "🚨 มีเหตุฉุกเฉิน SOS (" + activeCount + " จุด)!";
+
+        document.getElementById('totalAlerts').innerText = sosList.length + " รายการ";
+        document.getElementById('timeVal').innerText = timeStr;
+
+        const sound = document.getElementById('sirenSound');
+        sound.currentTime = 0;
+        sound.play().catch(function(e) { console.log("Audio play blocked"); });
+
+        map.setView([lat, lng], 14);
+        renderHistoryTable();
+    }
+
+    function resolveSOS(id) {
+        const item = sosList.find(s => s.id === id);
+        if (item && !item.resolved) {
+            item.resolved = true;
+
+            if (item.marker) map.removeLayer(item.marker);
+            if (item.route) map.removeControl(item.route);
+
+            const activeCount = sosList.filter(s => !s.resolved).length;
+            const statusBox = document.getElementById('statusBox');
+            if (activeCount === 0) {
+                statusBox.className = "status-box";
+                statusBox.innerHTML = "🟢 สถานะระบบ: ปกติไม่มีเหตุ";
+            } else {
+                statusBox.innerHTML = "🚨 มีเหตุฉุกเฉิน SOS (" + activeCount + " จุด)!";
+            }
+
+            renderHistoryTable();
+            alert('บันทึกผล: เคสที่ #' + id + ' ช่วยเหลือสำเร็จเรียบร้อยแล้ว!');
+        }
+    }
+
+    function renderHistoryTable() {
+        const historyBody = document.getElementById('historyBody');
+        if (sosList.length === 0) {
+            historyBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 20px;">ยังไม่มีประวัติการแจ้งเหตุฉุกเฉิน</td></tr>';
+            return;
+        }
+
+        let html = '';
+        const userIsAdmin = isAdmin();
+
+        for (let i = sosList.length - 1; i >= 0; i--) {
+            const item = sosList[i];
+            
+            const latDisplay = userIsAdmin ? item.lat.toFixed(6) : "9.******";
+            const lngDisplay = userIsAdmin ? item.lng.toFixed(6) : "99.******";
+
+            let statusColumn = '';
+            if (item.resolved) {
+                statusColumn = '<span style="color:#2ecc71; font-weight:bold;">ช่วยเหลือสำเร็จ 🟢</span>';
+            } else {
+                if (userIsAdmin) {
+                    statusColumn = '<span style="color:#00ff66;">กำลังนำทาง 📍</span> <button class="btn-resolve" onclick="resolveSOS(' + item.id + ')">ช่วยเหลือสำเร็จ</button>';
+                } else {
+                    statusColumn = '<span style="color:#00ff66;">กำลังนำทาง 📍</span>';
+                }
+            }
+
+            html += '<tr>' +
+                '<td style="color:#e74c3c; font-weight:bold;">#' + item.id + '</td>' +
+                '<td>' + item.time + '</td>' +
+                '<td>' + latDisplay + '</td>' +
+                '<td>' + lngDisplay + '</td>' +
+                '<td>' + statusColumn + '</td>' +
+                '</tr>';
+        }
+        historyBody.innerHTML = html;
+    }
+
+    function resetSOS() {
+        if (!isAdmin()) return;
+        
+        sosList.forEach(function(item) {
+            if (item.marker) map.removeLayer(item.marker);
+            if (item.route) map.removeControl(item.route);
+        });
+        sosList = [];
+
+        const statusBox = document.getElementById('statusBox');
+        statusBox.className = "status-box";
+        statusBox.innerHTML = "🟢 สถานะระบบ: ปกติไม่มีเหตุ";
+
+        document.getElementById('totalAlerts').innerText = "0 รายการ";
+        document.getElementById('timeVal').innerText = "-";
+
+        renderHistoryTable();
+        map.setView([baseLat, baseLng], 14);
+    }
+</script>
+
+</body>
+</html>
